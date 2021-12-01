@@ -1,7 +1,14 @@
 import random
+import math
 from tasks import *
 from processor import *
 from functools import reduce
+
+'''
+Simulation paras
+Simulation input generators
+Simulation pipeline
+'''
 
 # PARAMETERS ===============================================================
 # simulation config
@@ -11,6 +18,8 @@ MAX_LEN = 40
 N_TASK = 10             # number of tasks
 N_CORE = 8              # number of cores
 ALPHA = 10              # length_of_noncritical / length_of_critical 
+UTILIZATION = N_CORE / N_TASK 
+T_MAX = 2000000000
 
 # processor profile
 SWITCH_COST = 15        # cost of context switch
@@ -46,10 +55,18 @@ def gen_tasks(num, res_set, alpha):
             sections.append( (used_res[i], used_res[i].length) )
         if non_crit_len > 0:
             sections.append( (None, non_crit_len) )
-        
-        task_set.append(task(index, sections))
+        # generate total period
+        period = gen_period(critical_len + non_crit_len, UTILIZATION)
+        task_set.append(task(index, used_res, sections, period, period))  # set ddl the same as period
         print("task # {} consists of {}".format(index, sections))
     return task_set
+
+def gen_period(computation_time, utilization):
+    min_period = math.ceil(computation_time/utilization)
+    # fixed utilization 
+    # return min_period
+    # random utilization
+    return random.randint(min_period, min_period * 2)
 
 def gen_cores(num):
     core_set = []
@@ -57,20 +74,69 @@ def gen_cores(num):
         core_set.append(core(index))
     return core_set
 
-def gen_task2core_map(tasks, cores):
+def gen_task2core_map_random(tasks, cores): # task_id -> core_obj
     # a random mapper 
-    mapping = {}
-    for task in tasks:
-        mapping[task.idx] = random.choice(cores)
-    return mapping
+    for t in tasks:
+        target_core = random.choice(cores)
+        target_core.affi_tasks.append(t)
+        t.target_core = target_core
+        
+def gen_priority(task_set):
+    task_set.sort(key = lambda x: x.period)
+    max_priority = len(task_set)
+    for i in range(0, max_priority):
+        task_set[i].priority = max_priority - i
 
+def gen_ceiling_table(c, res_set):
+    table = {}
+    for r in res_set:
+        pri = 0
+        for t in c.affi_tasks:
+            if r in t.used_res:
+                pri = max(pri, t.priority)
+        table[r.idx] = pri
+    c.ceiling_table = table
+
+
+
+def inst_migration(core_from, core_to, inst):
+    pass
 
 # INIT ===================================================================
+
 # COMPONENTS
+# generate resources and tasks
 res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
 task_set = gen_tasks(N_TASK, res_set, ALPHA)
-core_set = gen_cores(N_CORE)
+# generate priority according to the period
+gen_priority(task_set)
 
-# MODULES
-feeder = task_launcher(task_set)
-mapper = task_mapper(gen_task2core_map(task_set, core_set))
+# RTS MODULES
+# generate cores
+core_set = gen_cores(N_CORE)
+# maps between task and core
+gen_task2core_map_random(task_set, core_set)
+# generate local ceiling table for each core
+for c in core_set:
+    gen_ceiling_table(c, res_set)
+# instance feeder
+launcher = task_launcher(task_set)
+
+# PIPELINE ===============================================================
+t = 0
+while t < T_MAX:
+    new_insts = launcher.tick()
+
+    # put the new insts into the pool of its corresponded core
+    for inst in new_insts:
+        inst.target_core.enroll(inst)
+    
+    # each core do sth
+    for c in core_set:
+        c.uptick()
+    for c in core_set:
+        c.intertick()
+    for c in core_set:
+        c.downtick()
+    
+    t += 1
