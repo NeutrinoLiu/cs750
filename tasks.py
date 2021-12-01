@@ -36,19 +36,18 @@ class snippet:
             self.length = length
 
     def acquire(self):   # check and acquire lock
-        if self.type == CRITICAL:
-            if self.locksecure():
-                self.res.holder = self.belong_to
+        if self.locksecure():
+            self.res.holder = self.belong_to
     def tick(self):
         if self.locksecure():
             self.progress += 1
-    def release(self):
+    def release_and_progress(self):
         self.belong_to.cur_snippet = self.next
         if self.type == CRITICAL:
             self.res.holder = None
 
     def locksecure(self):
-        return self.res.holder == None or self.res.holder == self.belong_to
+        return self.res == None or self.res.holder == None or self.res.holder == self.belong_to
     def done(self):
         return self.progress == self.length
     def preemtable(self):

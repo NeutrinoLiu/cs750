@@ -57,16 +57,16 @@ class core:
         if self.running == None:
             return
         if self.running.done():
-            self.running.release()
+            self.running.release_and_progress()
+            cur_inst = self.running.belong_to
+            if cur_inst.cur_snippet == None:
+                self.__retire(cur_inst)
             self.running = None
-        self.__clean_pool()
 
-    def __clean_pool(self):
-        accomplished = filter(lambda x: x.cur_snippet == None, self.pool)
-        for inst in accomplished:
-            inst.completion = self.time
-        self.accomplished += accomplished
-        self.pool = filter(lambda x: x.cur_snippet != None, self.pool)
+    def __retire(self, inst):
+        inst.completion = self.time
+        self.accomplished.append(inst)
+        self.pool.remove(inst)
 
     def __highest_pri_inst(self, previous = None):
         highest = previous
