@@ -15,32 +15,32 @@ Simulation pipeline
 
 # GENERATOR Implementations ================================================
 def gen_simple():
-    r0 = res(0, 5)
-    r1 = res(1, 5)
-    r2 = res(2, 5)
-    r3 = res(3, 5)
-    t0 = task(
+    r0 = Res(0, 5)
+    r1 = Res(1, 5)
+    r2 = Res(2, 5)
+    r3 = Res(3, 5)
+    t0 = Task(
         0,
         [r0],
         [(None,1), (r0,5), (None,1)],
         40,
         40
     )
-    t1 = task(
+    t1 = Task(
         1,
         [r1, r2],
         [(None,1), (r1,5), (None,1), (r2,5), (None,1)],
         60,
         60
     )
-    t2 = task(
+    t2 = Task(
         2,
         [r1, r3],
         [(None,4), (r1,5), (None,1), (r3,5), (None,1)],
         80,
         80
     )
-    t3 = task(
+    t3 = Task(
         3,
         [r3],
         [(None,1), (r3,5), (None,1)],
@@ -53,7 +53,7 @@ def gen_simple():
 def gen_res(num, min_len, max_len):
     res_set = []
     for index in range(0, num):
-        res_set.append(res(index, random.randint(min_len, max_len)))
+        res_set.append(Res(index, random.randint(min_len, max_len)))
     return res_set
 
 def gen_tasks(num, res_set, alpha):
@@ -80,7 +80,7 @@ def gen_tasks(num, res_set, alpha):
             sections.append( (None, non_crit_sublens[-1]) )
         # generate total period
         period = gen_period(critical_len + non_crit_len, UTILIZATION)
-        new_task = task(index, used_res, sections, period, period)
+        new_task = Task(index, used_res, sections, period, period)
         task_set.append(new_task)  # set ddl the same as period
     return task_set
 
@@ -94,7 +94,7 @@ def gen_period(computation_time, utilization):
 def gen_cores(num):
     core_set = []
     for index in range(0, num):
-        core_set.append(core(index))
+        core_set.append(Core(index))
     return core_set
 
 def gen_task2core_map_safe(tasks, cores): # task_id -> core_obj
@@ -156,7 +156,7 @@ gen_task2core_map_safe(task_set, core_set)
 for c in core_set:
     gen_ceiling_table(c, res_set)
 # instance launcher
-launcher = task_launcher(task_set)
+launcher = Task_launcher(task_set)
 
 # PIPELINE ===============================================================
 t = 0

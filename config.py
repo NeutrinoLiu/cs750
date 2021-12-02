@@ -1,8 +1,9 @@
 # PARAMETERS ===============================================================
-SIMPLE_TASKS = False
+SIMPLE_TASKS = True
+ENABLE_MRSP = False
+
 N_CORE = 2              # number of cores
 T_MAX = 500000
-
 
 # simulation config
 N_RES = 20              # number of resources

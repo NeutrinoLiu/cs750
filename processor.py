@@ -4,9 +4,9 @@ Implementation of a single core that work as a local PCP
 
 # core states
 from config import *
-from tasks import snippet
+from tasks import Snippet
 
-class core:
+class Core:
     def __init__(self, idx):
         self.idx = idx
         self.affi_tasks = []
@@ -31,42 +31,63 @@ class core:
         return uti
 
     def enroll(self, inst):
+        inst.cur_host = self
         self.pool.append(inst)
 
     # check condition and acquire lock
     def uptick(self):
-        # if there was no snippet running 
-        if self.running_snippet == None:
+
+        # a) if there was no snippet running, or last instance has finished
+        if self.running_snippet == None or self.running_snippet.belong_to.done():
+            # directly find the top pri inst and run it
             top_pri_inst = self.__highest_pri_inst()
             if top_pri_inst == None:
+                self.running_snippet = None
                 return
             if top_pri_inst.virgin:
                 top_pri_inst.virgin = False
                 top_pri_inst.activation = self.time
             self.running_snippet = top_pri_inst.cur_snippet
-            self.running_snippet.acquire()  # its fine to double acquire if you are the holder
+            self.running_snippet.pretick()  # its fine to double acquire if you are the holder
             return 
-        # non-preemptable snippet and not done, i.e. switch, keep running
+
+        # b) if it is non-preemptable snippet and not done, i.e. switch
         if not self.running_snippet.preemptable() and not self.running_snippet.done():
+            # keep run it
             return
-        # if there is a preemptable snippet running in last tick and not finished
-        # or a finished switch
+
+        # c) if there is a preemptable inst running in the last tick and NOT FINISHED
+        #    or a finished switch snippet in the last tick
         previous_inst = self.running_snippet.belong_to
         top_pri_inst = self.__highest_pri_inst(self.running_snippet.belong_to)
-        if top_pri_inst == None:    # no other inst can run
+        if top_pri_inst == None:        # no avail inst can run
             self.running_snippet = None
             return
         if top_pri_inst.virgin:
             top_pri_inst.virgin = False
             top_pri_inst.activation = self.time
-        if top_pri_inst != previous_inst:       # if next inst is different from previous one
-            switch_snippet = snippet(None, SWITCH_COST, context_switch=1)
+        
+        # c-1) if top-pri inst is different from previous one
+        if top_pri_inst != previous_inst:
+            # try to migrate the old inst to where his holding is welcome
+            if ENABLE_MRSP:
+                if self.running_snippet.type == STYPE_CRITICAL and self.running_snippet.lockholding():
+                    held_res = self.running_snippet.res
+                    waiter = held_res.spoony()
+                    if waiter and self != waiter.cur_host:
+                        Core.migrate(previous_inst, self, waiter.cur_host)
+
+            # insert a switch snippet for the new inst
+            switch_snippet = Snippet(None, SWITCH_COST, context_switch=1)
             switch_snippet.belong_to = top_pri_inst
             switch_snippet.next = top_pri_inst.cur_snippet
             self.running_snippet = switch_snippet
+            # no need to pretick for switch snippet
             return
-        self.running_snippet = top_pri_inst.cur_snippet
-        self.running_snippet.acquire()  # its fine to double acquire if you are the holder
+
+        # c-2) we will continue the same inst in the last tick
+        self.running_snippet = top_pri_inst.cur_snippet 
+        self.running_snippet.pretick()  # its fine to double acquire if you are the holder
         return 
     
     # make progress
@@ -92,21 +113,29 @@ class core:
             return
         cur_inst = self.running_snippet.belong_to
         if self.running_snippet.done():
-            self.running_snippet.release()
+            self.running_snippet.post_tick()
             cur_inst.cur_snippet = self.running_snippet.next # make progress
             if cur_inst.done():
-                self.__retire(cur_inst)
+                self.__retire(cur_inst)         # one may retire in the foreign core if the last is a migrated critical snippet
+                return
+            if not cur_inst.at_home(self):      # if the cur inst does not belong to this core, go home
+                Core.go_home(cur_inst, from_core=self)
             return
         if self.running_snippet.belong_to.ddl <= self.time:
-            self.running_snippet.release()
+            self.running_snippet.post_tick()
             self.running_snippet = None
-            self.__retire(cur_inst)
+            self.resign(cur_inst)
             print("t{}#{} ddl pass!".format(cur_inst.idx, cur_inst.order))
             raise Exception("Deadline Missed !")
 
     def __retire(self, inst):
         inst.completion = self.time
+        inst.cur_host = None
         self.accomplished.append(inst)
+        self.pool.remove(inst)
+
+    def resign(self, inst):
+        inst.cur_host = None
         self.pool.remove(inst)
 
     def __highest_pri_inst(self, previous = None):
@@ -120,8 +149,22 @@ class core:
             return None
         return highest
 
+    # task migration related!
+    @staticmethod
+    def migrate(inst, from_core, to_core):
+        from_core.resign(inst)
+        inst.mig_pri = to_core.running_snippet.belong_to.runtime_pri + 1
+        to_core.enroll(inst)
+
+    @staticmethod
+    def go_home(inst, from_core):
+        from_core.resign(inst)
+        inst.mig_pri = -1
+        inst.target_core.enroll(inst)
+
+
 # simulator modules 
-class task_launcher:
+class Task_launcher:
     def __init__(self, tasks):
         self.tasks = tasks
         self.cur_time = 0
