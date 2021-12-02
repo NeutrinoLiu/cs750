@@ -37,7 +37,7 @@ class Res:
         else:
             self.subscribe(inst)
             return False
-    def releases(self):
+    def release(self):
         self.__holder = None
     def held_by(self, inst):
         return self.__holder == inst

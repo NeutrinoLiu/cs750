@@ -48,7 +48,7 @@ class Core:
                 top_pri_inst.virgin = False
                 top_pri_inst.activation = self.time
             self.running_snippet = top_pri_inst.cur_snippet
-            self.running_snippet.pretick()  # its fine to double acquire if you are the holder
+            self.running_snippet.pre_tick()  # its fine to double acquire if you are the holder
             return 
 
         # b) if it is non-preemptable snippet and not done, i.e. switch
@@ -87,7 +87,7 @@ class Core:
 
         # c-2) we will continue the same inst in the last tick
         self.running_snippet = top_pri_inst.cur_snippet 
-        self.running_snippet.pretick()  # its fine to double acquire if you are the holder
+        self.running_snippet.pre_tick()  # its fine to double acquire if you are the holder
         return 
     
     # make progress

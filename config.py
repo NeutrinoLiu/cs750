@@ -2,7 +2,7 @@
 SIMPLE_TASKS = True
 ENABLE_MRSP = False
 
-N_CORE = 2              # number of cores
+N_CORE = 1              # number of cores
 T_MAX = 500000
 
 # simulation config
