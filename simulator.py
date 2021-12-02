@@ -1,5 +1,7 @@
 import random
 import math
+import time
+from config import *
 from tasks import *
 from processor import *
 from functools import reduce
@@ -9,21 +11,6 @@ Simulation paras
 Simulation input generators
 Simulation pipeline
 '''
-
-# PARAMETERS ===============================================================
-# simulation config
-N_RES = 20              # number of resources
-MIN_LEN = 10
-MAX_LEN = 40
-N_TASK = 10             # number of tasks
-N_CORE = 8              # number of cores
-ALPHA = 10              # length_of_noncritical / length_of_critical 
-UTILIZATION = N_CORE / N_TASK 
-T_MAX = 2000000000
-
-# processor profile
-SWITCH_COST = 15        # cost of context switch
-
 
 # GENERATOR Implementations ================================================
 # NOTICE: this is where we should change for different algos
@@ -42,8 +29,8 @@ def gen_tasks(num, res_set, alpha):
         used_res = random.sample(res_set, num_used_res)
         # the length of critical and non-crit sections
         critical_len = 0
-        for i in used_res:
-            critical_len += used_res.length
+        for r in used_res:
+            critical_len += r.length
         non_crit_len = critical_len * alpha
         # generate section list
         sections = []
@@ -57,8 +44,8 @@ def gen_tasks(num, res_set, alpha):
             sections.append( (None, non_crit_len) )
         # generate total period
         period = gen_period(critical_len + non_crit_len, UTILIZATION)
-        task_set.append(task(index, used_res, sections, period, period))  # set ddl the same as period
-        print("task # {} consists of {}".format(index, sections))
+        new_task = task(index, used_res, sections, period, period)
+        task_set.append(new_task)  # set ddl the same as period
     return task_set
 
 def gen_period(computation_time, utilization):
@@ -97,8 +84,6 @@ def gen_ceiling_table(c, res_set):
         table[r.idx] = pri
     c.ceiling_table = table
 
-
-
 def inst_migration(core_from, core_to, inst):
     pass
 
@@ -110,6 +95,8 @@ res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
 task_set = gen_tasks(N_TASK, res_set, ALPHA)
 # generate priority according to the period
 gen_priority(task_set)
+for t in task_set:
+    print(t)
 
 # RTS MODULES
 # generate cores
@@ -119,11 +106,12 @@ gen_task2core_map_random(task_set, core_set)
 # generate local ceiling table for each core
 for c in core_set:
     gen_ceiling_table(c, res_set)
-# instance feeder
+# instance launcher
 launcher = task_launcher(task_set)
 
 # PIPELINE ===============================================================
 t = 0
+start_time = time.time()
 while t < T_MAX:
     new_insts = launcher.tick()
 
@@ -140,3 +128,8 @@ while t < T_MAX:
         c.downtick()
     
     t += 1
+
+for i in range(0, N_CORE):
+    print(core_set[i].to_string(100))
+
+print("total simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
