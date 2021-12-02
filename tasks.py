@@ -83,13 +83,14 @@ class Snippet:
         return self.type != STYPE_SWITCH
 
 class Task:
-    def __init__(self, idx, used_res, sections, period, deadline):
+    def __init__(self, idx, used_res, sections, period, deadline, initial = 0):
         self.idx = idx
         self.priority = 0
         self.used_res = used_res
         self.section_tuples = sections   # list of (res, length)
         self.period = period
         self.deadline = deadline
+        self.initial = initial
         self.target_core = None
     
     def __str__(self):
@@ -111,7 +112,7 @@ class Task:
         # link between snippets to enable next
         for i in range(0, len(snippets) - 1):
             snippets[i].next = snippets[i+1]
-        new_inst = Instance(self.idx, int(cur_time/self.period), self.priority, snippets, cur_time, cur_time + self.deadline, self.target_core)
+        new_inst = Instance(self.idx, int((cur_time-self.initial)/self.period), self.priority, snippets, cur_time, cur_time + self.deadline, self.target_core)
         for s in new_inst.snippets:
             s.belong_to = new_inst
         return new_inst
@@ -134,6 +135,8 @@ class Instance:
         self.activation = -1
         self.completion = -1
         self.ddl = ddl
+    def __str__(self):
+        return "t{}#{}_core#{}".format(self.idx, self.order, self.cur_host.idx if self.cur_host else "None")
     
     @property
     def runtime_pri(self):

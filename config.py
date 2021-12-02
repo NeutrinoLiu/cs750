@@ -1,17 +1,18 @@
 # PARAMETERS ===============================================================
-SIMPLE_TASKS = True
-ENABLE_MRSP = False
+SIMPLE_TASKS = False
+ENABLE_MRSP = True
+RANDOM_SEED = 32773
 
-N_CORE = 1              # number of cores
-T_MAX = 500000
+N_CORE = 2              # number of cores
+T_MAX = 10000
 
 # simulation config
-N_RES = 20              # number of resources
-MIN_LEN = 5
-MAX_LEN = 40
+N_RES = 2              # number of resources
+MIN_LEN = 50
+MAX_LEN = 100
 N_TASK = 10             # number of tasks
-ALPHA = 2              # length_of_noncritical / length_of_critical 
-UTILIZATION = N_CORE / N_TASK 
+ALPHA = 1              # length_of_noncritical / length_of_critical 
+UTILIZATION = N_CORE / N_TASK / 2
 
 # processor profile
 SWITCH_COST = 1        # cost of context switch

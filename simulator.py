@@ -2,6 +2,7 @@ import random
 import math
 import time
 from config import *
+from simple_tasks import gen_simple
 from tasks import *
 from processor import *
 from functools import reduce
@@ -13,42 +14,10 @@ Simulation input generators
 Simulation pipeline
 '''
 
-# GENERATOR Implementations ================================================
-def gen_simple():
-    r0 = Res(0, 5)
-    r1 = Res(1, 5)
-    r2 = Res(2, 5)
-    r3 = Res(3, 5)
-    t0 = Task(
-        0,
-        [r0],
-        [(None,1), (r0,5), (None,1)],
-        40,
-        40
-    )
-    t1 = Task(
-        1,
-        [r1, r2],
-        [(None,1), (r1,5), (None,1), (r2,5), (None,1)],
-        60,
-        60
-    )
-    t2 = Task(
-        2,
-        [r1, r3],
-        [(None,4), (r1,5), (None,1), (r3,5), (None,1)],
-        80,
-        80
-    )
-    t3 = Task(
-        3,
-        [r3],
-        [(None,1), (r3,5), (None,1)],
-        30,
-        30
-    )
-    return list([r0, r1, r2, r3]), list([t0, t1, t2, t3])
+if RANDOM_SEED > 0:
+    random.seed(RANDOM_SEED)
 
+# GENERATOR Implementations ================================================
 # NOTICE: this is where we should change for different algos
 def gen_res(num, min_len, max_len):
     res_set = []
@@ -62,6 +31,7 @@ def gen_tasks(num, res_set, alpha):
 
         # the res this task may use
         num_used_res = random.randint(1, len(res_set))
+        # num_used_res = len(res_set) - 1
         used_res = random.sample(res_set, num_used_res)
         # the length of critical and non-crit sections
         critical_len = 0
@@ -159,6 +129,8 @@ for c in core_set:
 launcher = Task_launcher(task_set)
 
 # PIPELINE ===============================================================
+print("\n[ START SIMULATION ]")
+print("MrsP is {}".format("ON" if ENABLE_MRSP else "OFF"))
 t = 0
 start_time = time.time()
 while t < T_MAX:
@@ -179,7 +151,18 @@ while t < T_MAX:
     t += 1
 
 print("\n[ SIMULATION RESULT ]")
-for i in range(0, N_CORE):
-    print(core_set[i].trace(480))
+for c in core_set:
+    print(c.trace(96))
+    print()
 
-print("\ntotal simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
+total_done = 0
+total_resp = 0.0
+for c in core_set:
+    done_num, avg_resp = c.avg_resp_time()
+    total_done += done_num
+    total_resp += done_num * avg_resp
+    print("core#{}\tavg_resp_time {:.5f}".format(c.idx, avg_resp))
+
+print("overall\tavg_resp_time {:.5f}".format(total_resp/total_done))
+
+print("simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
