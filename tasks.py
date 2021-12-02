@@ -10,7 +10,7 @@ class res:
         self.waiter = []
         self.length = length
     def __str__(self):
-        return "res#{}".format(self.idx)
+        return "r{}".format(self.idx)
 
 class snippet:
     def __init__(self, res, length, context_switch = 0):
@@ -40,8 +40,7 @@ class snippet:
             self.progress += 1
             return True
         return False
-    def release_and_progress(self):
-        self.belong_to.cur_snippet = self.next
+    def release(self):
         if self.type == STYPE_CRITICAL:
             self.res.holder = None
 
@@ -62,12 +61,19 @@ class task:
         self.period = period
         self.deadline = deadline
         self.target_core = None
+    
     def __str__(self):
         section_print = ""
         for section in self.section_tuples:
             section_print += " ({}:{})".format(section[0].__str__(), section[1])
-        return "task#{}pri#{}:{}".format(self.idx, self.priority, section_print)
+        return "task#{}/pri#{}/T{}/uti{:.3f}:{}".format(self.idx, self.priority, self.period, self.utilization, section_print)
 
+    @property
+    def utilization(self):
+        length = 0
+        for st in self.section_tuples:
+            length += st[1]
+        return length/self.period
     def new_instance(self, cur_time):
         snippets = []
         for (res, length) in self.section_tuples:
@@ -75,15 +81,16 @@ class task:
         # link between snippets to enable next
         for i in range(0, len(snippets) - 1):
             snippets[i].next = snippets[i+1]
-        new_inst = instance(self.idx, self.priority, snippets, cur_time, cur_time + self.deadline, self.target_core)
+        new_inst = instance(self.idx, int(cur_time/self.period), self.priority, snippets, cur_time, cur_time + self.deadline, self.target_core)
         for s in new_inst.snippets:
             s.belong_to = new_inst
         return new_inst
 
 class instance:
-    def __init__(self, idx, priority, snippets, arrival, ddl, core):
+    def __init__(self, idx, order, priority, snippets, arrival, ddl, core):
         # tags
         self.idx = idx
+        self.order = order
         self.target_core = core
         self.base_pri = priority
         # runtime states

@@ -5,6 +5,7 @@ from config import *
 from tasks import *
 from processor import *
 from functools import reduce
+from utils import *
 
 '''
 Simulation paras
@@ -13,6 +14,41 @@ Simulation pipeline
 '''
 
 # GENERATOR Implementations ================================================
+def gen_simple():
+    r0 = res(0, 5)
+    r1 = res(1, 5)
+    r2 = res(2, 5)
+    r3 = res(3, 5)
+    t0 = task(
+        0,
+        [r0],
+        [(None,1), (r0,5), (None,1)],
+        40,
+        40
+    )
+    t1 = task(
+        1,
+        [r1, r2],
+        [(None,1), (r1,5), (None,1), (r2,5), (None,1)],
+        60,
+        60
+    )
+    t2 = task(
+        2,
+        [r1, r3],
+        [(None,4), (r1,5), (None,1), (r3,5), (None,1)],
+        80,
+        80
+    )
+    t3 = task(
+        3,
+        [r3],
+        [(None,1), (r3,5), (None,1)],
+        30,
+        30
+    )
+    return list([r0, r1, r2, r3]), list([t0, t1, t2, t3])
+
 # NOTICE: this is where we should change for different algos
 def gen_res(num, min_len, max_len):
     res_set = []
@@ -34,14 +70,14 @@ def gen_tasks(num, res_set, alpha):
         non_crit_len = critical_len * alpha
         # generate section list
         sections = []
+        non_crit_sublens = int_ripper(non_crit_len, num_used_res + 1)
         for i in range(0, num_used_res):
-            sub_crit_len = random.randint(0, non_crit_len)
-            if sub_crit_len > 0:
-                sections.append( (None, sub_crit_len) )
-                non_crit_len -= sub_crit_len
+            section_len = non_crit_sublens[i]
+            if section_len > 0:
+                sections.append( (None, section_len) )
             sections.append( (used_res[i], used_res[i].length) )
-        if non_crit_len > 0:
-            sections.append( (None, non_crit_len) )
+        if non_crit_sublens[-1] > 0:
+            sections.append( (None, non_crit_sublens[-1]) )
         # generate total period
         period = gen_period(critical_len + non_crit_len, UTILIZATION)
         new_task = task(index, used_res, sections, period, period)
@@ -61,12 +97,19 @@ def gen_cores(num):
         core_set.append(core(index))
     return core_set
 
-def gen_task2core_map_random(tasks, cores): # task_id -> core_obj
+def gen_task2core_map_safe(tasks, cores): # task_id -> core_obj
     # a random mapper 
     for t in tasks:
         target_core = random.choice(cores)
+        while target_core.utilization + t.utilization > 1:
+            target_core = random.choice(cores)
         target_core.affi_tasks.append(t)
         t.target_core = target_core
+    for c in cores:
+        task_list = ""
+        for t in c.affi_tasks:
+            task_list += " task#{}".format(t.idx)
+        print("core#{}/uti{:.3f}:{}".format(c.idx, c.utilization, task_list))
         
 def gen_priority(task_set):
     task_set.sort(key = lambda x: x.period)
@@ -87,12 +130,16 @@ def gen_ceiling_table(c, res_set):
 def inst_migration(core_from, core_to, inst):
     pass
 
+
 # INIT ===================================================================
 
 # COMPONENTS
 # generate resources and tasks
-res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
-task_set = gen_tasks(N_TASK, res_set, ALPHA)
+if SIMPLE_TASKS:
+    res_set, task_set = gen_simple()
+else:
+    res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
+    task_set = gen_tasks(N_TASK, res_set, ALPHA)
 # generate priority according to the period
 gen_priority(task_set)
 for t in task_set:
@@ -102,7 +149,7 @@ for t in task_set:
 # generate cores
 core_set = gen_cores(N_CORE)
 # maps between task and core
-gen_task2core_map_random(task_set, core_set)
+gen_task2core_map_safe(task_set, core_set)
 # generate local ceiling table for each core
 for c in core_set:
     gen_ceiling_table(c, res_set)
@@ -129,7 +176,8 @@ while t < T_MAX:
     
     t += 1
 
+print("simulation result:")
 for i in range(0, N_CORE):
-    print(core_set[i].to_string(100))
+    print(core_set[i].trace(480))
 
 print("total simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))

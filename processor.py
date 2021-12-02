@@ -17,10 +17,18 @@ class core:
         self.running_snippet = None             # current running SNIPPET
         self.time = 0
         self.history = []
-    def to_string(self, max_time=0):
+
+    def trace(self, max_time=0):
         if max_time == 0:
-            "core#{}: {}".format(self.idx, " ".join(self.history))
-        return "core#{}: {}".format(self.idx, " ".join(self.history[:max_time]))
+            "core#{}: {}".format(self.idx, "\t".join(self.history))
+        return "core#{}: {}".format(self.idx, "\t".join(self.history[:max_time]))
+    
+    @property
+    def utilization(self):
+        uti = 0
+        for at in self.affi_tasks:
+            uti += at.utilization
+        return uti
 
     def enroll(self, inst):
         self.pool.append(inst)
@@ -67,26 +75,33 @@ class core:
             cur_inst = self.running_snippet.belong_to
             if self.running_snippet.tick():     # snippet progress +1
                 if self.running_snippet.type == STYPE_NON_CRIT:
-                    self.history.append("t{}_p{}_NC".format(cur_inst.idx, cur_inst.runtime_pri))
+                    self.history.append("t{}#{}_p{}_NC".format(cur_inst.idx, cur_inst.order, cur_inst.runtime_pri))
                 if self.running_snippet.type == STYPE_CRITICAL:
-                    self.history.append("t{}_p{}_CR".format(cur_inst.idx, cur_inst.runtime_pri))
+                    self.history.append("t{}#{}_p{}_CR".format(cur_inst.idx, cur_inst.order, cur_inst.runtime_pri))
                 if self.running_snippet.type == STYPE_SWITCH:
-                    self.history.append("t{}_CSWIT".format(cur_inst.idx))
+                    self.history.append("t{}#{}_CSWIT".format(cur_inst.idx, cur_inst.order))
             else:
-                self.history.append("t{}_SPINN".format(cur_inst.idx))
+                self.history.append("t{}#{}_SPINN".format(cur_inst.idx, cur_inst.order))
         else:
-            self.history.append("_IDLING_")
+            self.history.append("__IDLING__")
 
     # release lock and conclude progress
     def downtick(self):
         self.time += 1
         if self.running_snippet == None:
             return
+        cur_inst = self.running_snippet.belong_to
         if self.running_snippet.done():
-            self.running_snippet.release_and_progress()
-            cur_inst = self.running_snippet.belong_to
+            self.running_snippet.release()
+            cur_inst.cur_snippet = self.running_snippet.next # make progress
             if cur_inst.done():
                 self.__retire(cur_inst)
+            return
+        if self.running_snippet.belong_to.ddl <= self.time:
+            self.running_snippet.release()
+            self.running_snippet = None
+            self.__retire(cur_inst)
+            print("t{}#{} ddl pass!".format(cur_inst.idx, cur_inst.order))
 
     def __retire(self, inst):
         inst.completion = self.time
