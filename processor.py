@@ -12,15 +12,15 @@ class core:
         self.affi_tasks = []
         self.ceiling_table = {}         # res idx -> max priority
         # runtime state
-        self.pool = []
-        self.accomplished = []
-        self.running_snippet = None             # current running SNIPPET
+        self.pool = []                  # instance pool
+        self.accomplished = []          # accomplished instances
+        self.running_snippet = None     # current running SNIPPET
         self.time = 0
-        self.history = []
+        self.history = []               # running history
 
     def trace(self, max_time=0):
         if max_time == 0:
-            "core#{}: {}".format(self.idx, "\t".join(self.history))
+           return "core#{}: {}".format(self.idx, "\t".join(self.history))
         return "core#{}: {}".format(self.idx, "\t".join(self.history[:max_time]))
     
     @property
@@ -102,6 +102,7 @@ class core:
             self.running_snippet = None
             self.__retire(cur_inst)
             print("t{}#{} ddl pass!".format(cur_inst.idx, cur_inst.order))
+            raise Exception("Deadline Missed !")
 
     def __retire(self, inst):
         inst.completion = self.time

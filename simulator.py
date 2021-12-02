@@ -108,7 +108,7 @@ def gen_task2core_map_safe(tasks, cores): # task_id -> core_obj
     for c in cores:
         task_list = ""
         for t in c.affi_tasks:
-            task_list += " task#{}".format(t.idx)
+            task_list += "\ttask#{}".format(t.idx)
         print("core#{}/uti{:.3f}:{}".format(c.idx, c.utilization, task_list))
         
 def gen_priority(task_set):
@@ -142,6 +142,7 @@ else:
     task_set = gen_tasks(N_TASK, res_set, ALPHA)
 # generate priority according to the period
 gen_priority(task_set)
+print("\n[ TASK STRUCTURE ]")
 for t in task_set:
     print(t)
 
@@ -149,6 +150,7 @@ for t in task_set:
 # generate cores
 core_set = gen_cores(N_CORE)
 # maps between task and core
+print("\n[ TASK-CORE MAP ]")
 gen_task2core_map_safe(task_set, core_set)
 # generate local ceiling table for each core
 for c in core_set:
@@ -176,8 +178,8 @@ while t < T_MAX:
     
     t += 1
 
-print("simulation result:")
+print("\n[ SIMULATION RESULT ]")
 for i in range(0, N_CORE):
     print(core_set[i].trace(480))
 
-print("total simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
+print("\ntotal simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))

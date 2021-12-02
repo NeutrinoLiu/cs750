@@ -1,15 +1,16 @@
 # PARAMETERS ===============================================================
 SIMPLE_TASKS = False
+N_CORE = 2              # number of cores
+T_MAX = 500000
+
 
 # simulation config
 N_RES = 20              # number of resources
 MIN_LEN = 5
 MAX_LEN = 40
 N_TASK = 10             # number of tasks
-N_CORE = 1              # number of cores
-ALPHA = 10              # length_of_noncritical / length_of_critical 
-UTILIZATION = N_CORE / N_TASK
-T_MAX = 5000000
+ALPHA = 2              # length_of_noncritical / length_of_critical 
+UTILIZATION = N_CORE / N_TASK 
 
 # processor profile
 SWITCH_COST = 1        # cost of context switch
