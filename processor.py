@@ -7,6 +7,8 @@ from config import *
 from tasks import Snippet
 
 class Core:
+    MrsP_ctr = 0
+
     def __init__(self, idx):
         self.idx = idx
         self.affi_tasks = []
@@ -63,7 +65,7 @@ class Core:
             # keep run it
             return
 
-        # c) if there is a preemptable inst running in the last tick and NOT FINISHED
+        # c) if there is a preemptable inst running in the last tick
         #    or a finished switch snippet in the last tick
         previous_inst = self.running_snippet.belong_to
         top_pri_inst = self.__highest_pri_inst(self.running_snippet.belong_to)
@@ -75,6 +77,7 @@ class Core:
             top_pri_inst.activation = self.time
         
         # c-1) if top-pri inst is different from previous one
+        # preemtion happens!!
         if top_pri_inst != previous_inst:
             # try to migrate the old inst to where his holding is welcome
             if ENABLE_MRSP:
@@ -88,7 +91,7 @@ class Core:
             # insert a switch snippet for the new inst
             switch_snippet = Snippet(None, SWITCH_COST, context_switch=1)
             switch_snippet.belong_to = top_pri_inst
-            switch_snippet.next = top_pri_inst.cur_snippet
+            switch_snippet.next = top_pri_inst.cur_snippet # fantastic design 
             self.running_snippet = switch_snippet
             # no need to pretick for switch snippet
             return
@@ -122,6 +125,7 @@ class Core:
         cur_inst = self.running_snippet.belong_to
         if self.running_snippet.done():
             self.running_snippet.post_tick()
+            # VIP
             cur_inst.cur_snippet = self.running_snippet.next # make progress
             if cur_inst.done():
                 self.__retire(cur_inst)         # one may retire in the foreign core if the last is a migrated critical snippet
@@ -131,7 +135,7 @@ class Core:
             if not cur_inst.at_home(self) and not self.running_snippet.type == STYPE_SWITCH:
                 Core.go_home(cur_inst, from_core=self)
             return
-        if self.running_snippet.belong_to.ddl <= self.time:
+        if cur_inst.ddl <= self.time:
             self.running_snippet.post_tick()
             self.resign(cur_inst)
             print("t{}#{} Deadline Missed !".format(cur_inst.idx, cur_inst.order))
@@ -165,15 +169,16 @@ class Core:
         return highest
 
     # task migration related!
-    @staticmethod
-    def migrate(inst, from_core, to_core):
+    @classmethod
+    def migrate(cls, inst, from_core, to_core):
         # print("MrsP is triggered! move {} from core#{} to core#{}".format(inst, from_core.idx, to_core.idx))
+        cls.MrsP_ctr += 1
         from_core.resign(inst)
         inst.mig_pri = to_core.running_snippet.belong_to.runtime_pri + 1
         to_core.enroll(inst)
 
-    @staticmethod
-    def go_home(inst, from_core):
+    @classmethod
+    def go_home(cls, inst, from_core):
         # print("MrsP done! move {} from core#{} back to core#{}".format(inst, from_core.idx, inst.target_core.idx))
         from_core.resign(inst)
         inst.mig_pri = -1

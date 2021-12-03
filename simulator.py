@@ -14,9 +14,6 @@ Simulation input generators
 Simulation pipeline
 '''
 
-if RANDOM_SEED > 0:
-    random.seed(RANDOM_SEED)
-
 # GENERATOR Implementations ================================================
 # NOTICE: this is where we should change for different algos
 def gen_res(num, min_len, max_len):
@@ -30,14 +27,16 @@ def gen_tasks(num, res_set, alpha):
     for index in range(0, num):
 
         # the res this task may use
-        num_used_res = random.randint(1, len(res_set))
-        # num_used_res = len(res_set) - 1
-        used_res = random.sample(res_set, num_used_res)
+        # num_used_res = random.randint(1, len(res_set) * 2)
+        num_used_res = len(res_set) * 2
+        used_res = []
+        for i in range(0, num_used_res):
+            used_res.append(random.choice(res_set))
         # the length of critical and non-crit sections
         critical_len = 0
         for r in used_res:
             critical_len += r.length
-        non_crit_len = critical_len * alpha
+        non_crit_len = random.randint(critical_len * alpha, critical_len * alpha * 2)
         # generate section list
         sections = []
         non_crit_sublens = int_ripper(non_crit_len, num_used_res + 1)
@@ -97,9 +96,6 @@ def gen_ceiling_table(c, res_set):
         table[r.idx] = pri
     c.ceiling_table = table
 
-def inst_migration(core_from, core_to, inst):
-    pass
-
 
 # INIT ===================================================================
 
@@ -108,8 +104,11 @@ def inst_migration(core_from, core_to, inst):
 if SIMPLE_TASKS:
     res_set, task_set = gen_simple()
 else:
+    if TASK_RANDOM_SEED > 0:
+        random.seed(TASK_RANDOM_SEED)
     res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
     task_set = gen_tasks(N_TASK, res_set, ALPHA)
+
 # generate priority according to the period
 gen_priority(task_set)
 print("\n[ TASK STRUCTURE ]")
@@ -119,12 +118,16 @@ for t in task_set:
 # RTS MODULES
 # generate cores
 core_set = gen_cores(N_CORE)
+
 # maps between task and core
 print("\n[ TASK-CORE MAP ]")
+if MAP_RANDOM_SEED > 0:
+    random.seed(MAP_RANDOM_SEED)
 gen_task2core_map_safe(task_set, core_set)
 # generate local ceiling table for each core
 for c in core_set:
     gen_ceiling_table(c, res_set)
+
 # instance launcher
 launcher = Task_launcher(task_set)
 
@@ -142,17 +145,17 @@ while t < T_MAX:
     
     # each core do sth
     for c in core_set:
-        c.uptick()
+        c.uptick() #0
     for c in core_set:
-        c.intertick()
+        c.intertick() #1
     for c in core_set:
-        c.downtick()
+        c.downtick() #0
     
     t += 1
 
 print("\n[ SIMULATION RESULT ]")
 for c in core_set:
-    print(c.trace(96))
+    print(c.trace(100))
     print()
 
 total_done = 0
@@ -163,6 +166,7 @@ for c in core_set:
     total_resp += done_num * avg_resp
     print("core#{}\tavg_resp_time {:.5f}".format(c.idx, avg_resp))
 
-print("overall\tavg_resp_time {:.5f}".format(total_resp/total_done))
+print("\noverall\tavg_resp_time: {:.5f}\t num_of_migration: {}".format(total_resp/total_done, Core.MrsP_ctr))
 
-print("simulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
+
+print("\nsimulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
