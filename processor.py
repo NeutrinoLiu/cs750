@@ -87,7 +87,10 @@ class Core:
             if ENABLE_MRSP:
                 if self.running_snippet.type == STYPE_CRITICAL and self.running_snippet.lockholding():
                     held_res = self.running_snippet.res
-                    waiter = held_res.spoony()
+                    if previous_inst.at_home(self):
+                        waiter = held_res.spoony()
+                    else:
+                        waiter = held_res.spoony(self)
                     # print("MrsP might be triggered! {} is spin for r{}".format(waiter, held_res))
                     if waiter and self != waiter.cur_host:
                         Core.migrate(previous_inst, self, waiter.cur_host)

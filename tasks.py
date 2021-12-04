@@ -20,9 +20,21 @@ class Res:
     def unsubscribe(self, inst):
         if inst in self.__wait_list:
             self.__wait_list.remove(inst)
-    def spoony(self):           # those who want it but do not have it.
+    def spoony(self, barrier_core = None):          # those who want it but do not have it.
+                                                    # those who want it but do not have it, and sequence behind the barrier_core
         if len(self.__wait_list) > 0:
-            return self.__wait_list[0]
+            if barrier_core == None:
+                return self.__wait_list[0]                      # for migrate from its target_core to another spin core
+                                                                # simply pick the first waiter
+      
+            barrier_index = -1                                  # for migrate from one spin core to another spin core
+                                                                # need to find the position of current spin inst first
+            for i in range(0, len(self.__wait_list)):
+                if self.__wait_list[i].cur_host == barrier_core:
+                    barrier_index = i
+                    break
+            if barrier_index >= 0 and barrier_index < len(self.__wait_list) - 1:
+                return self.__wait_list[barrier_index + 1]      # then pick the next inst behind the current spin inst
         return None
     
     # holder related
