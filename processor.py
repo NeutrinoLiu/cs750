@@ -88,9 +88,9 @@ class Core:
                 if self.running_snippet.type == STYPE_CRITICAL and self.running_snippet.lockholding():
                     held_res = self.running_snippet.res
                     if previous_inst.at_home(self):
-                        waiter = held_res.spoony()
+                        waiter = held_res.spoony()          # migrate from target_core to another spin core
                     else:
-                        waiter = held_res.spoony(self)
+                        waiter = held_res.spoony(self)      # migrate from one spin core to another spin core
                     # print("MrsP might be triggered! {} is spin for r{}".format(waiter, held_res))
                     if waiter and self != waiter.cur_host:
                         Core.migrate(previous_inst, self, waiter.cur_host)

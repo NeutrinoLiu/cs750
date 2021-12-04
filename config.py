@@ -1,13 +1,13 @@
 # PARAMETERS ===============================================================
-SIMPLE_TASKS = True
+SIMPLE_TASKS = False
 ENABLE_MRSP = True
 
 OPTIMAL_MAP = True
-RAND_OPT_ROUNDS = 1000
+RAND_OPT_ROUNDS = 10000
 
 
-N_CORE = 2              # number of cores
-T_MAX = 50000
+N_CORE = 4              # number of cores
+T_MAX = 500000
 
 TASK_RANDOM_SEED = 0
 MAP_RANDOM_SEED = 0
