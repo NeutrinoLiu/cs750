@@ -2,7 +2,7 @@ import math
 import random
 import time
 
-from config import MAP_RANDOM_SEED
+from config import *
 
 def distance(list_a, list_b):
     dist = 0.0
