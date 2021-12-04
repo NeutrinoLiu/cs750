@@ -20,6 +20,10 @@ class Core:
         self.time = 0
         self.history = []               # running history
 
+    def __str__(self):
+        return "core#{}\tuti{:.3f}:\t{}".format(self.idx, self.utilization, list(map(lambda x: "t{}".format(x.idx), self.affi_tasks)))
+
+
     def trace(self, max_time=0):
         if max_time == 0:
            return "{}".format("\t".join(self.history))

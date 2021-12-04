@@ -75,4 +75,4 @@ def gen_task2core_map_random_opt(task_set, core_set, res_set):
         c.affi_tasks = local_task_list
         for t in local_task_list:
             t.target_core = c
-        print("core#{}/uti{:.3f}:{}".format(c.idx, c.utilization, list(map(lambda x: "t{}".format(x.idx),local_task_list))))
+        print(c)

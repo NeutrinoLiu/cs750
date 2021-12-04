@@ -81,10 +81,7 @@ def gen_task2core_map_safe(tasks, cores): # task_id -> core_obj
         target_core.affi_tasks.append(t)
         t.target_core = target_core
     for c in cores:
-        task_list = ""
-        for t in c.affi_tasks:
-            task_list += "\ttask#{}".format(t.idx)
-        print("core#{}/uti{:.3f}:{}".format(c.idx, c.utilization, task_list))
+        print(c)
         
 def gen_priority(task_set):
     task_set.sort(key = lambda x: x.period)
@@ -164,19 +161,21 @@ while t < T_MAX:
     t += 1
 
 print("\n[ SIMULATION RESULT ]")
-for c in core_set:
-    print(c.trace(100))
-    print()
+# for c in core_set:
+#     print(c.trace(100))
+#     print()
 
 total_done = 0
 total_resp = 0.0
+total_complete = 0
 for c in core_set:
     done_num, avg_resp = c.avg_resp_time()
     total_done += done_num
     total_resp += done_num * avg_resp
+    total_complete += len(c.accomplished)
     print("core#{}\tavg_resp_time {:.5f}".format(c.idx, avg_resp))
 
-print("\noverall\tavg_resp_time: {:.5f}\t num_of_migration: {}".format(total_resp/total_done, Core.MrsP_ctr))
+print("\noverall\tavg_resp_time: {:.5f}\nnum_of_migration: {}\nnum_of_completes: {}".format(total_resp/total_done, Core.MrsP_ctr, total_complete))
 
 
 print("\nsimulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))

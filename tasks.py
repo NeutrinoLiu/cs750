@@ -97,7 +97,7 @@ class Task:
         section_print = ""
         for section in self.section_tuples:
             section_print += "\t{}:{}".format(section[0].__str__() if section[0] else "nc", section[1])
-        return "task#{}/pri#{}/T{}/uti{:.3f}:{}".format(self.idx, self.priority, self.period, self.utilization, section_print)
+        return "task#{}\tpri#{}\tT{}\tuti{:.3f}:{}".format(self.idx, self.priority, self.period, self.utilization, section_print)
 
     @property
     def utilization(self):
