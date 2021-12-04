@@ -9,3 +9,14 @@ def int_ripper(total, num_bins):
     for i in range(1, num_bins+1):
         bins.append(splitter[i] - splitter[i-1])
     return bins
+
+def variance(num_list):
+    avg = 0.0
+    for n in num_list:
+        avg += num_list
+    avg = avg / len(num_list)
+
+    v = 0.0
+    for n in num_list:
+        v += (v-n)**2
+    return v / len(num_list)
