@@ -2,6 +2,8 @@ import math
 import random
 import time
 
+from config import MAP_RANDOM_SEED
+
 def distance(list_a, list_b):
     dist = 0.0
     length = min(len(list_a), len(list_b))
@@ -33,7 +35,6 @@ def compute_cost(group_lists, res_set):
     return avg_distance(big_vector_list)
 
 def gen_random_map(core_set, task_set):
-    random.seed(time.time())
     bins = len(core_set)
     all_bins = []
     for i in range(0, bins):
@@ -50,6 +51,11 @@ def gen_task2core_map_random_opt(task_set, core_set, res_set):
 
     print("\n[ RANDOM OPTIMIZER ]")
     start_time = time.time()
+    if MAP_RANDOM_SEED > 0:
+        random.seed(MAP_RANDOM_SEED)
+    else:
+        random.seed(time.time())
+
     for r in range(0, ROUNDS):
         group_lists = gen_random_map(core_set, task_set)
         # group list is a list of list<tasks>
