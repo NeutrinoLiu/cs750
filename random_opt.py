@@ -45,7 +45,6 @@ def gen_random_map(core_set, task_set):
     return all_bins
 
 def gen_task2core_map_random_opt(task_set, core_set, res_set):
-    ROUNDS = 100000
     optimal_value = None
     optimal_map = None
 
@@ -56,7 +55,7 @@ def gen_task2core_map_random_opt(task_set, core_set, res_set):
     else:
         random.seed(time.time())
 
-    for r in range(0, ROUNDS):
+    for r in range(0, RAND_OPT_ROUNDS):
         group_lists = gen_random_map(core_set, task_set)
         # group list is a list of list<tasks>
         # e.g. [  [t1,t2], [t0], [t4]  ]
@@ -68,7 +67,7 @@ def gen_task2core_map_random_opt(task_set, core_set, res_set):
             optimal_map = group_lists
             optimal_value = cur_cost
     
-    print("{} used to run random optimizer for {} iterations".format(time.time() - start_time, ROUNDS))
+    print("{} used to run random optimizer for {} iterations".format(time.time() - start_time, RAND_OPT_ROUNDS))
     print("min avg distance between cores: {:.5f}".format(optimal_value))
     
     for c in core_set:
