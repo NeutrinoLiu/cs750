@@ -1,12 +1,13 @@
 # PARAMETERS ===============================================================
-SIMPLE_TASKS = True
-ENABLE_MRSP = True
+SIMPLE_TASKS = False
+ENABLE_MRSP = False
+OPTIMAL_MAP = False
 
 N_CORE = 4              # number of cores
-T_MAX = 1000
+T_MAX = 100000
 
-TASK_RANDOM_SEED = 32767
-MAP_RANDOM_SEED = 961
+TASK_RANDOM_SEED = 314159
+MAP_RANDOM_SEED = 0
 
 # simulation config
 N_RES = 2              # number of resources

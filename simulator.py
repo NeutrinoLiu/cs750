@@ -3,10 +3,10 @@ import math
 import time
 from config import *
 from simple_tasks import gen_simple
-from tasks import *
-from processor import *
-from functools import reduce
-from utils import *
+from tasks import Task, Res
+from processor import Core, Task_launcher
+from utils import int_ripper
+from random_opt import gen_task2core_map_random_opt
 
 '''
 Simulation paras
@@ -27,8 +27,7 @@ def gen_tasks(num, res_set, alpha):
     for index in range(0, num):
 
         # the res this task may use
-        # num_used_res = random.randint(1, len(res_set) * 2)
-        num_used_res = len(res_set) * 2
+        num_used_res = random.randint(0, len(res_set) * 2)
         used_res = []
         for i in range(0, num_used_res):
             used_res.append(random.choice(res_set))
@@ -36,7 +35,10 @@ def gen_tasks(num, res_set, alpha):
         critical_len = 0
         for r in used_res:
             critical_len += r.length
-        non_crit_len = random.randint(critical_len * alpha, critical_len * alpha * 2)
+        if critical_len == 0:
+            non_crit_len = random.randint(MIN_LEN, MAX_LEN * (ALPHA + 1))
+        else:
+            non_crit_len = random.randint(critical_len * alpha, critical_len * alpha * 2)
         # generate section list
         sections = []
         non_crit_sublens = int_ripper(non_crit_len, num_used_res + 1)
@@ -68,6 +70,10 @@ def gen_cores(num):
 
 def gen_task2core_map_safe(tasks, cores): # task_id -> core_obj
     # a random mapper 
+    if MAP_RANDOM_SEED > 0:
+        random.seed(MAP_RANDOM_SEED)
+    else:
+        random.seed(time.time())
     for t in tasks:
         target_core = random.choice(cores)
         while target_core.utilization + t.utilization > 1:
@@ -106,6 +112,8 @@ if SIMPLE_TASKS:
 else:
     if TASK_RANDOM_SEED > 0:
         random.seed(TASK_RANDOM_SEED)
+    else:
+        random.seed(time.time())
     res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
     task_set = gen_tasks(N_TASK, res_set, ALPHA)
 
@@ -121,9 +129,11 @@ core_set = gen_cores(N_CORE)
 
 # maps between task and core
 print("\n[ TASK-CORE MAP ]")
-if MAP_RANDOM_SEED > 0:
-    random.seed(MAP_RANDOM_SEED)
-gen_task2core_map_safe(task_set, core_set)
+if OPTIMAL_MAP:
+    gen_task2core_map_random_opt(task_set, core_set, res_set)
+else:
+    gen_task2core_map_safe(task_set, core_set)
+
 # generate local ceiling table for each core
 for c in core_set:
     gen_ceiling_table(c, res_set)
