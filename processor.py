@@ -9,6 +9,10 @@ from tasks import Snippet
 class Core:
     MrsP_ctr = 0
 
+    @classmethod
+    def rst_ctr(cls):
+        cls.MrsP_ctr = 0
+
     def __init__(self, idx):
         self.idx = idx
         self.affi_tasks = []
@@ -36,6 +40,28 @@ class Core:
         if len(self.accomplished) == 0:
             return 0, 0
         return len(self.accomplished), total / len(self.accomplished)
+
+    def avg_resp_time_top(self):
+        total = 0
+        inst_ctr = 0
+        for done_inst in self.accomplished:
+            if done_inst.base_pri > N_TASK / 2:
+                inst_ctr += 1
+                total += done_inst.completion - done_inst.activation
+        if inst_ctr == 0:
+            return 0, 0
+        return inst_ctr, total / inst_ctr
+    
+    def avg_resp_time_bot(self):
+        total = 0
+        inst_ctr = 0
+        for done_inst in self.accomplished:
+            if done_inst.base_pri <= N_TASK / 2:
+                inst_ctr += 1
+                total += done_inst.completion - done_inst.activation
+        if inst_ctr == 0:
+            return 0, 0
+        return inst_ctr, total / inst_ctr
     
     @property
     def utilization(self):
@@ -145,7 +171,7 @@ class Core:
         if cur_inst.ddl <= self.time:
             self.running_snippet.post_tick()
             self.resign(cur_inst)
-            print("t{}#{} Deadline Missed !".format(cur_inst.idx, cur_inst.order))
+            # print("t{}#{} Deadline Missed !".format(cur_inst.idx, cur_inst.order))
             raise Exception("Deadline Missed !")
 
     def __retire(self, inst):

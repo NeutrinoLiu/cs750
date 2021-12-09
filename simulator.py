@@ -73,15 +73,19 @@ def gen_task2core_map_safe(tasks, cores): # task_id -> core_obj
     if MAP_RANDOM_SEED > 0:
         random.seed(MAP_RANDOM_SEED)
     else:
-        random.seed(time.time())
+        seed = time.time()
+        mprint("MAP RANDOM SEED is {}".format(seed))
+        random.seed(seed)
     for t in tasks:
         target_core = random.choice(cores)
         while target_core.utilization + t.utilization > 1:
             target_core = random.choice(cores)
         target_core.affi_tasks.append(t)
         t.target_core = target_core
-    for c in cores:
-        print(c)
+    if PRINT_MAP:
+        mprint("\n[ TASK-CORE MAP ]")
+        for c in cores:
+            mprint(c)
         
 def gen_priority(task_set):
     task_set.sort(key = lambda x: x.period)
@@ -99,83 +103,105 @@ def gen_ceiling_table(c, res_set):
         table[r.idx] = pri
     c.ceiling_table = table
 
+def mprint(content):
+    if MY_PRINT:
+        print(content)
 
-# INIT ===================================================================
+def one_time_simulation(task_rand_seed):
 
-# COMPONENTS
-# generate resources and tasks
-if SIMPLE_TASKS:
-    res_set, task_set = gen_simple()
-else:
-    if TASK_RANDOM_SEED > 0:
-        random.seed(TASK_RANDOM_SEED)
+    # INIT ===================================================================
+    # COMPONENTS
+    # generate resources and tasks
+    if SIMPLE_TASKS:
+        res_set, task_set = gen_simple()
     else:
-        random.seed(time.time())
-    res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
-    task_set = gen_tasks(N_TASK, res_set, ALPHA)
+        if task_rand_seed > 0:
+            random.seed(task_rand_seed)
+        else:
+            seed = time.time()
+            mprint("TASK RANDOM SEED is {}".format(seed))
+            random.seed(seed)
+        res_set = gen_res(N_RES, MIN_LEN, MAX_LEN)
+        task_set = gen_tasks(N_TASK, res_set, ALPHA)
 
-# generate priority according to the period
-gen_priority(task_set)
-print("\n[ TASK STRUCTURE ]")
-for t in task_set:
-    print(t)
+    # generate priority according to the period
+    gen_priority(task_set)
+    if PRINT_TASK:
+        mprint("\n[ TASK STRUCTURE ]")
+        for t in task_set:
+            mprint(t)
 
-# RTS MODULES
-# generate cores
-core_set = gen_cores(N_CORE)
+    # RTS MODULES
+    # generate cores
+    core_set = gen_cores(N_CORE)
 
-# maps between task and core
-print("\n[ TASK-CORE MAP ]")
-if OPTIMAL_MAP:
-    gen_task2core_map_random_opt(task_set, core_set, res_set)
-else:
-    gen_task2core_map_safe(task_set, core_set)
+    # maps between task and core
+    if OPTIMAL_MAP:
+        gen_task2core_map_random_opt(task_set, core_set, res_set)
+    else:
+        gen_task2core_map_safe(task_set, core_set)
 
-# generate local ceiling table for each core
-for c in core_set:
-    gen_ceiling_table(c, res_set)
-
-# instance launcher
-launcher = Task_launcher(task_set)
-
-# PIPELINE ===============================================================
-print("\n[ START SIMULATION ]")
-print("MrsP is {}".format("ON" if ENABLE_MRSP else "OFF"))
-t = 0
-start_time = time.time()
-while t < T_MAX:
-    new_insts = launcher.tick()
-
-    # put the new insts into the pool of its corresponded core
-    for inst in new_insts:
-        inst.target_core.enroll(inst)
-    
-    # each core do sth
+    # generate local ceiling table for each core
     for c in core_set:
-        c.uptick() #0
+        gen_ceiling_table(c, res_set)
+
+    # instance launcher
+    launcher = Task_launcher(task_set)
+
+    # PIPELINE ===============================================================
+    mprint("\n[ START SIMULATION ]")
+    mprint("MrsP is {}".format("ON" if ENABLE_MRSP else "OFF"))
+    t = 0
+    start_time = time.time()
+    while t < T_MAX:
+        new_insts = launcher.tick()
+
+        # put the new insts into the pool of its corresponded core
+        for inst in new_insts:
+            inst.target_core.enroll(inst)
+        
+        # each core do sth
+        for c in core_set:
+            c.uptick() #0
+        for c in core_set:
+            c.intertick() #1
+        for c in core_set:
+            c.downtick() #0
+        
+        t += 1
+
+    mprint("\n[ SIMULATION RESULT ]")
+
+    total_done = 0
+    total_resp = 0.0
+    total_top_done = 0
+    total_top_resp = 0.0
+    total_bot_resp = 0.0
+    total_bot_done = 0
     for c in core_set:
-        c.intertick() #1
-    for c in core_set:
-        c.downtick() #0
-    
-    t += 1
+        done_num, avg_resp = c.avg_resp_time()
+        top_pri_done, top_pri_resp = c.avg_resp_time_top()
+        bot_pri_done, bot_pri_resp = c.avg_resp_time_bot()
+        total_done += done_num
+        total_top_done += top_pri_done
+        total_bot_done += bot_pri_done
+        total_resp += done_num * avg_resp
+        total_top_resp += top_pri_done * top_pri_resp
+        total_bot_resp += bot_pri_done * bot_pri_resp
+        if PRINT_PERCORE:
+            mprint("core#{}\tavg_resp_time {:.5f}".format(c.idx, avg_resp))
 
-print("\n[ SIMULATION RESULT ]")
-# for c in core_set:
-#     print(c.trace(100))
-#     print()
+    mprint("top_resp_time: {:.5f} for {} instances \nbot_resp_time: {:.5f} for {} instances \nnum_of_migration: {} \navg_resp_time: {:.5f} for {} instances".format(total_top_resp/total_top_done, total_top_done, total_bot_resp/total_bot_done, total_bot_done, Core.MrsP_ctr, total_resp/total_done, total_done))
+    mprint("\nsimulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
 
-total_done = 0
-total_resp = 0.0
-total_complete = 0
-for c in core_set:
-    done_num, avg_resp = c.avg_resp_time()
-    total_done += done_num
-    total_resp += done_num * avg_resp
-    total_complete += len(c.accomplished)
-    print("core#{}\tavg_resp_time {:.5f}".format(c.idx, avg_resp))
+    return total_top_resp/total_top_done, total_bot_resp/total_bot_done, Core.MrsP_ctr, total_resp/total_done
 
-print("\noverall\tavg_resp_time: {:.5f}\nnum_of_migration: {}\nnum_of_completes: {}".format(total_resp/total_done, Core.MrsP_ctr, total_complete))
-
-
-print("\nsimulation time {}, for {} ticks".format(time.time() - start_time, T_MAX))
+for i in range(0, 200):
+    with open("data.txt", "a") as f:
+        Core.rst_ctr()
+        try:
+            top_avg, bot_avg, ctr, total_avg = one_time_simulation(i + 10086)
+        except Exception:
+            f.write("ddl passed\n")
+        else: 
+            f.write("{:.2f}\t{:.2f}\t{}\t{:.2f}\n".format(top_avg, bot_avg, ctr, total_avg))

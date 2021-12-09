@@ -44,11 +44,15 @@ def gen_random_map(core_set, task_set):
         target_bin.append(t)
     return all_bins
 
+def mprint(content):
+    if MY_PRINT:
+        print(content)
+
 def gen_task2core_map_random_opt(task_set, core_set, res_set):
     optimal_value = None
     optimal_map = None
 
-    print("\n[ RANDOM OPTIMIZER ]")
+    mprint("\n[ RANDOM OPTIMIZER ]")
     start_time = time.time()
     if MAP_RANDOM_SEED > 0:
         random.seed(MAP_RANDOM_SEED)
@@ -67,12 +71,13 @@ def gen_task2core_map_random_opt(task_set, core_set, res_set):
             optimal_map = group_lists
             optimal_value = cur_cost
     
-    print("{} used to run random optimizer for {} iterations".format(time.time() - start_time, RAND_OPT_ROUNDS))
-    print("min avg distance between cores: {:.5f}".format(optimal_value))
+    mprint("{} used to run random optimizer for {} iterations".format(time.time() - start_time, RAND_OPT_ROUNDS))
+    mprint("min avg distance between cores: {:.5f}".format(optimal_value))
     
     for c in core_set:
         local_task_list = optimal_map[c.idx]
         c.affi_tasks = local_task_list
         for t in local_task_list:
             t.target_core = c
-        print(c)
+        if PRINT_MAP:
+            mprint(c)
